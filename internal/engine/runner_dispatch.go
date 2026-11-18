@@ -223,7 +223,7 @@ func (e *Engine) dispatchRunnerTask(ctx context.Context, runnerID string, run do
 			if runtime.IsAgentCLI(ex.Kind) {
 				cred := sb.credentialSnapshot().AgentCLI[ex.Kind]
 				if strings.TrimSpace(cred.APIKey) == "" {
-					return "", fmt.Errorf("当前责任人未配置 %s API Key：请先在个人配置中配置", runtime.AgentCLILabel(ex.Kind))
+					return "", fmt.Errorf("当前责任人未配置 %s API Key：请先在个人配置中配置，或将执行机器认证方式切回本机登录", runtime.AgentCLILabel(ex.Kind))
 				}
 				invocation.AgentCLIAPIKey = cred.APIKey
 				invocation.AgentCLIBaseURL = cred.BaseURL

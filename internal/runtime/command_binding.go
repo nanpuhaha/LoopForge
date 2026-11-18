@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"agentflow/internal/observability"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"path/filepath"
@@ -265,6 +266,28 @@ func BindAgentCLICommand(sandbox Sandbox, workspace string, command CommandSpec,
 		env[key] = value
 	}
 	env["HOME"] = homeEnv
+	env["TMPDIR"] = tmp
+	if sandboxDriver(sandbox) == "docker" {
+		env["TMPDIR"] = filepath.ToSlash(filepath.Join("/workspace", ".agentflow", "tmp", name))
+	}
+	return argv, env, nil
+}
+
+// BindAgentCLILocalCommand binds an agent CLI in RuntimeAuthLocal ("로컬 머신 로그인 모드").
+// It preserves the host's existing CLI environment and local login state without
+// requiring a personal API key.
+func BindAgentCLILocalCommand(sandbox Sandbox, workspace string, command CommandSpec, argv []string) ([]string, map[string]string, error) {
+	name := PrivateHomeName(command)
+	tmp, err := EnsureControlDirectory(workspace, "tmp", name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create private temp: %w", err)
+	}
+	if command.Provider == AgentCLIAntigravity && command.AgentCLI.ReadOnly {
+		settings := map[string]any{"permissions": agyChatPermissions}
+		inline, _ := json.Marshal(settings)
+		argv = insertBeforeFlag(argv, "-p", "--settings", string(inline))
+	}
+	env := map[string]string{}
 	env["TMPDIR"] = tmp
 	if sandboxDriver(sandbox) == "docker" {
 		env["TMPDIR"] = filepath.ToSlash(filepath.Join("/workspace", ".agentflow", "tmp", name))

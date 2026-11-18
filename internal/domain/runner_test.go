@@ -67,13 +67,17 @@ func TestPublicRunnerTaskStripsCloneURLCredentials(t *testing.T) {
 	}
 }
 
-func TestAgentCLIRuntimeAuthModeIsPersonal(t *testing.T) {
+func TestAgentCLIRuntimeAuthModeSupportsLocalAndPersonal(t *testing.T) {
 	r := Runner{Runtimes: []RunnerRuntime{
 		{Provider: "opencode", AuthMode: RuntimeAuthLocal},
+		{Provider: "agy", AuthMode: RuntimeAuthPersonal},
 		{Provider: "codex", AuthMode: RuntimeAuthLocal},
 	}}
-	if r.RuntimeAuthMode("opencode") != RuntimeAuthPersonal {
-		t.Fatal("agent CLI must use personal credentials even when a local mode is stored")
+	if r.RuntimeAuthMode("opencode") != RuntimeAuthLocal {
+		t.Fatal("agent CLI with local auth must return local")
+	}
+	if r.RuntimeAuthMode("agy") != RuntimeAuthPersonal {
+		t.Fatal("agent CLI with personal auth must return personal")
 	}
 	if r.RuntimeAuthMode("codex") != RuntimeAuthLocal {
 		t.Fatal("codex local login must stay local")

@@ -74,7 +74,7 @@ function runnerPersonalCredentialConfigured(provider){
   return !!user.agentCliCredentials?.[provider]?.apiKeyConfigured;
 }
 function runnerRuntimeSupportsLogin(runtime){
-  return runtime.provider==='codex'||runtime.provider==='claude-code';
+  return runtime.provider!=='codebuddy';
 }
 function runnerRuntimeAuthMode(runtime){
   return runnerRuntimeSupportsLogin(runtime)&&runtime.authMode!=='personal'?'local':'personal';

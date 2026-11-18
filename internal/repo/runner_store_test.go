@@ -86,25 +86,32 @@ func TestRunnerHeartbeatPreservesRuntimeAuthMode(t *testing.T) {
 	}
 }
 
-func TestAgentCLIHeartbeatForcesPersonalAuth(t *testing.T) {
+func TestAgentCLISupportsLocalAndPersonalAuth(t *testing.T) {
 	s := newTestRunner(t)
 	now := time.Now().UTC()
 	if err := s.PutRunner(domain.Runner{ID: "runner-agy", Status: domain.RunnerStatusOnline, Runtimes: []domain.RunnerRuntime{{Provider: "opencode", Status: domain.RuntimeStatusOnline, AuthMode: domain.RuntimeAuthLocal}}}); err != nil {
 		t.Fatal(err)
 	}
 	runner, _ := s.Runner("runner-agy")
-	if got := runner.RuntimeAuthMode("opencode"); got != domain.RuntimeAuthPersonal {
-		t.Fatalf("stored local agent CLI auth = %q", got)
+	if got := runner.RuntimeAuthMode("opencode"); got != domain.RuntimeAuthLocal {
+		t.Fatalf("stored local agent CLI auth = %q, want %q", got, domain.RuntimeAuthLocal)
 	}
-	if err := s.SetRunnerRuntimeAuthMode("runner-agy", "opencode", domain.RuntimeAuthLocal, now); err == nil {
-		t.Fatal("local auth accepted for opencode")
+	if err := s.SetRunnerRuntimeAuthMode("runner-agy", "opencode", domain.RuntimeAuthPersonal, now); err != nil {
+		t.Fatalf("switch to personal failed: %v", err)
+	}
+	runner, _ = s.Runner("runner-agy")
+	if got := runner.RuntimeAuthMode("opencode"); got != domain.RuntimeAuthPersonal {
+		t.Fatalf("switched to personal auth = %q, want %q", got, domain.RuntimeAuthPersonal)
+	}
+	if err := s.SetRunnerRuntimeAuthMode("runner-agy", "opencode", domain.RuntimeAuthLocal, now); err != nil {
+		t.Fatalf("switch back to local failed: %v", err)
 	}
 	if err := s.RunnerHeartbeat("runner-agy", []domain.RunnerRuntime{{Provider: "opencode", Status: domain.RuntimeStatusOnline}}, "1", now, now.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	runner, _ = s.Runner("runner-agy")
-	if len(runner.Runtimes) != 1 || runner.Runtimes[0].AuthMode != domain.RuntimeAuthPersonal {
-		t.Fatalf("heartbeat = %+v", runner.Runtimes)
+	if len(runner.Runtimes) != 1 || runner.Runtimes[0].AuthMode != domain.RuntimeAuthLocal {
+		t.Fatalf("heartbeat preserved auth = %+v", runner.Runtimes)
 	}
 }
 

@@ -28,6 +28,13 @@ func TestBindInvocationCredentials(t *testing.T) {
 			t.Fatalf("argv=%v env=%v err=%v", gotArgv, env, err)
 		}
 	})
+	t.Run("local login leaves agent CLI invocation unchanged", func(t *testing.T) {
+		argv := []string{"agy", "-p", "prompt"}
+		gotArgv, env, err := bindInvocationCredentials(&domain.RunnerInvocation{CredentialSource: domain.RuntimeAuthLocal}, []runtime.CredentialBinding{runtime.BindAgentCLI}, argv)
+		if err != nil || len(env) != 0 || strings.Join(gotArgv, "|") != strings.Join(argv, "|") {
+			t.Fatalf("argv=%v env=%v err=%v", gotArgv, env, err)
+		}
+	})
 	t.Run("personal codex injects key and provider config", func(t *testing.T) {
 		inv := &domain.RunnerInvocation{CredentialSource: domain.RuntimeAuthPersonal, CodexAPIKey: "codex-secret", CodexBaseURL: "https://gateway.example/v1"}
 		argv, env, err := bindInvocationCredentials(inv, []runtime.CredentialBinding{runtime.BindCodex}, []string{"codex", "exec", "prompt"})

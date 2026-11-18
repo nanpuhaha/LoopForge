@@ -476,3 +476,27 @@ func TestOpenAgentCLIHomeTrustsBase(t *testing.T) {
 		}
 	}
 }
+
+func TestBindAgentCLILocalCommand(t *testing.T) {
+	workspace := t.TempDir()
+	command := AgentCLICommand(AgentCLIAntigravity, AgentCLICommandOptions{Model: "gemini-2.5-pro", Prompt: "test prompt"})
+	command.PrivateHome = true
+	command.PrivateHomeKey = "agy-test"
+	sb := &localSandbox{workspace: workspace, environment: map[string]string{}}
+	argv, env, err := BindAgentCLILocalCommand(sb, workspace, command, command.Argv)
+	if err != nil {
+		t.Fatalf("BindAgentCLILocalCommand failed: %v", err)
+	}
+	if !slices.Contains(argv, "gemini-2.5-pro") {
+		t.Errorf("argv should contain model: %v", argv)
+	}
+	if env["TMPDIR"] == "" {
+		t.Errorf("expected TMPDIR in env")
+	}
+	if _, ok := env["HOME"]; ok {
+		t.Errorf("HOME should not be overwritten in local mode")
+	}
+	if _, ok := env["GEMINI_API_KEY"]; ok {
+		t.Errorf("GEMINI_API_KEY should not be stripped to empty in local mode")
+	}
+}

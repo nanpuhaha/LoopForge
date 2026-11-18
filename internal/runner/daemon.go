@@ -876,14 +876,25 @@ func (d *Daemon) executeInvocation(ctx context.Context, task domain.RunnerTask) 
 		return execResult{status: domain.RunnerTaskFailed, errMsg: err.Error()}, nil
 	}
 	if runtime.IsAgentCLI(prepared.Command.Provider) {
-		cred := runtime.ProviderCredential{APIKey: inv.AgentCLIAPIKey, BaseURL: inv.AgentCLIBaseURL, Protocol: inv.AgentCLIProtocol, Models: inv.AgentCLIModels}
-		var agentEnv map[string]string
-		argv, agentEnv, err = runtime.BindAgentCLICommand(sandbox, workspace, prepared.Command, cred, argv)
-		if err != nil {
-			return execResult{status: domain.RunnerTaskFailed, errMsg: err.Error()}, nil
-		}
-		for key, value := range agentEnv {
-			credentialEnv[key] = value
+		if inv.CredentialSource == domain.RuntimeAuthLocal {
+			var agentEnv map[string]string
+			argv, agentEnv, err = runtime.BindAgentCLILocalCommand(sandbox, workspace, prepared.Command, argv)
+			if err != nil {
+				return execResult{status: domain.RunnerTaskFailed, errMsg: err.Error()}, nil
+			}
+			for key, value := range agentEnv {
+				credentialEnv[key] = value
+			}
+		} else {
+			cred := runtime.ProviderCredential{APIKey: inv.AgentCLIAPIKey, BaseURL: inv.AgentCLIBaseURL, Protocol: inv.AgentCLIProtocol, Models: inv.AgentCLIModels}
+			var agentEnv map[string]string
+			argv, agentEnv, err = runtime.BindAgentCLICommand(sandbox, workspace, prepared.Command, cred, argv)
+			if err != nil {
+				return execResult{status: domain.RunnerTaskFailed, errMsg: err.Error()}, nil
+			}
+			for key, value := range agentEnv {
+				credentialEnv[key] = value
+			}
 		}
 	} else if sandbox != nil && inv.CredentialSource == domain.RuntimeAuthPersonal && prepared.Command.PrivateHome {
 		credentialEnv, err = bindSandboxPrivateHome(workspace, task.Sandbox.Profile.Driver, task.Provider, credentialEnv)
