@@ -278,6 +278,21 @@ func WriteKimiConversationAgent(path, systemPrompt string, readOnly bool) error 
 	return os.WriteFile(path, []byte(content), 0o600)
 }
 
-func (agentCLIProvider) SandboxRequirements() SandboxRequirements {
-	return SandboxRequirements{PrivateHome: true}
+func (p agentCLIProvider) SandboxRequirements() SandboxRequirements {
+	req := SandboxRequirements{PrivateHome: true}
+	switch p.kind {
+	case AgentCLIAntigravity:
+		req.CLIStates = []CLIStateRequirement{{Directory: ".gemini"}}
+	case AgentCLIOpenCode:
+		req.CLIStates = []CLIStateRequirement{{Directory: ".config/opencode"}}
+	case AgentCLICursor:
+		req.CLIStates = []CLIStateRequirement{{Directory: ".cursor"}}
+	case AgentCLIPi:
+		req.CLIStates = []CLIStateRequirement{{Directory: ".pi"}}
+	case AgentCLIKimi:
+		req.CLIStates = []CLIStateRequirement{{Directory: ".kimi-code"}}
+	case AgentCLIDeepSeek:
+		req.CLIStates = []CLIStateRequirement{{Directory: ".dsh"}}
+	}
+	return req
 }

@@ -128,27 +128,37 @@ func bindCommand(sandbox Sandbox, workspace string, command CommandSpec, credent
 			}
 			bound.environment["ANTHROPIC_BASE_URL"] = baseURL
 		case BindAgentCLI:
-			var home AgentCLIHome
-			homeEnv := bound.environment["HOME"]
-			if command.PrivateHome {
-				home = WorkspaceAgentCLIHome(workspace, PrivateHomeName(command))
-			} else {
-				homeEnv = command.environment["HOME"]
-				if strings.TrimSpace(homeEnv) == "" {
-					return CommandSpec{}, fmt.Errorf("%s 需要独立的 HOME 目录", AgentCLILabel(command.Provider))
+			cred := credentials.AgentCLI[command.Provider]
+			if strings.TrimSpace(cred.APIKey) != "" {
+				var home AgentCLIHome
+				homeEnv := bound.environment["HOME"]
+				if command.PrivateHome {
+					home = WorkspaceAgentCLIHome(workspace, PrivateHomeName(command))
+				} else {
+					homeEnv = command.environment["HOME"]
+					if strings.TrimSpace(homeEnv) == "" {
+						return CommandSpec{}, fmt.Errorf("%s 需要独立的 HOME 目录", AgentCLILabel(command.Provider))
+					}
+					home = HostAgentCLIHome(homeEnv)
 				}
-				home = HostAgentCLIHome(homeEnv)
-			}
-			argv, env, err := ApplyAgentCLICredential(command.Provider, credentials.AgentCLI[command.Provider], command.AgentCLI, home, homeEnv, bound.Argv)
-			if err != nil {
-				return CommandSpec{}, err
-			}
-			bound.Argv = argv
-			for _, key := range agentCLIHostEnv {
-				bound.environment[key] = ""
-			}
-			for key, value := range env {
-				bound.environment[key] = value
+				argv, env, err := ApplyAgentCLICredential(command.Provider, cred, command.AgentCLI, home, homeEnv, bound.Argv)
+				if err != nil {
+					return CommandSpec{}, err
+				}
+				bound.Argv = argv
+				for _, key := range agentCLIHostEnv {
+					bound.environment[key] = ""
+				}
+				for key, value := range env {
+					bound.environment[key] = value
+				}
+			} else {
+				// Local mode: keep host environment and credentials
+				if command.Provider == AgentCLIAntigravity && command.AgentCLI.ReadOnly {
+					settings := map[string]any{"permissions": agyChatPermissions}
+					inline, _ := json.Marshal(settings)
+					bound.Argv = insertBeforeFlag(bound.Argv, "-p", "--settings", string(inline))
+				}
 			}
 		default:
 			return CommandSpec{}, fmt.Errorf("unsupported credential binding %q", binding)
